@@ -41,7 +41,7 @@
 #define EXITBAD 1
 #define MAXPATH 130
 #define MAXEXT 5
-#define TXT_EXT ".txt"
+#define TXT_EXT ".bas"
 #define PRG_EXT ".prg"
 #define START_PROC "start tok64"
 #define STOP_PROC "stop tok64"
@@ -68,6 +68,7 @@
 #define KEYWORDS 17
 #define SPECIAL 18
 #define EXTENSIONS 19
+#define SHIFTED 20
 
 #define MAXTOKENLINE 200
 #define LOBYTE 0
@@ -115,6 +116,7 @@ typedef struct command_struct
 #define CH_NULL ((char *) 0)
 #define KW_NULL ((Keyword_type *) 0)
 
+int unshifted = TRUE;
 
 Keyword_type *kw_list [MAXKWLIST];
 
@@ -216,10 +218,10 @@ Keyword_type special [] =
    "{pink}", 0x96,       "{dark gray}", 0x97,
    "{gray}", 0x98,       "{light green}", 0x99,
    "{light blue}", 0x9A, "{light gray}", 0x9B,
-         "{f1}", 0x85,         "{f2}", 0x89,
-         "{f3}", 0x86,         "{f4}", 0x8A,
-         "{f5}", 0x87,         "{f6}", 0x8B,
-         "{f7}", 0x88,         "{f8}", 0x8C,
+   "{f1}", 0x85,         "{f2}", 0x89,
+   "{f3}", 0x86,         "{f4}", 0x8A,
+   "{f5}", 0x87,         "{f6}", 0x8B,
+   "{f7}", 0x88,         "{f8}", 0x8C,
    "{space}", SPACE,
    "", 0
 };
@@ -325,26 +327,27 @@ Keyword_type graphics_52 [] =
 
 Command_type cmds [] =
 {
-   "/toprg", "Tokenize *.TXT text file to Commodore Basic program (*)",
-   "/totxt", "Detokenize *.PRG basic file to ascii text",
-   "/mult", "Process multiple listings within a single text file",
-   "/nomult", "Process text file as a single listing (*)",
-   "/lower", "Render keywords as lower case when de-tokenizing (*)",
-   "/upper", "Render keywords as upper case when de-tokenizing",
-   "/lowcase", "Lower case quoted strings & comments when tokenizing",
-   "/case", "Quoted string & comment tokenizing is case-sensitive (*)",
-   "/col", "Column sensitivity enabled while tokenizing",
-   "/nocol", "Column sensitivity disabled (*)",
-   "/stomp", "Overwrite existing files without confirmation",
-   "/nostomp", "Ask before overwriting existing files (*)",
-   "/fincart3", "The Final Cartridge 3 Basic Extension",
-   "/graph52", "Graphics52 Basic Extension",
-   "/64", "C64 Basic V2 (*)",
-   "/list", "Display a list of command arguments",
-   "/help", "The help screen",
-   "/keywords", "Display a list of Commodore Basic keywords",
-   "/special", "Display a list of special substitutions",
-   "/ext", "Display a list of Basic extension keywords",
+   "--toprg", "Tokenize *.BAS text file to Commodore Basic program (*)",
+   "--totxt", "Detokenize *.PRG basic file to ascii text",
+   "--mult", "Process multiple listings within a single text file",
+   "--nomult", "Process text file as a single listing (*)",
+   "--lower", "Render keywords as lower case when de-tokenizing (*)",
+   "--upper", "Render keywords as upper case when de-tokenizing",
+   "--lowcase", "Lower case quoted strings & comments when tokenizing",
+   "--case", "Quoted string & comment tokenizing is case-sensitive (*)",
+   "--col", "Column sensitivity enabled while tokenizing",
+   "--nocol", "Column sensitivity disabled (*)",
+   "--stomp", "Overwrite existing files without confirmation",
+   "--nostomp", "Ask before overwriting existing files (*)",
+   "--fincart3", "The Final Cartridge 3 Basic Extension",
+   "--graph52", "Graphics52 Basic Extension",
+   "--64", "C64 Basic V2 (*)",
+   "--list", "Display a list of command arguments",
+   "--help", "The help screen",
+   "--keywords", "Display a list of Commodore Basic keywords",
+   "--special", "Display a list of special substitutions",
+   "--ext", "Display a list of Basic extension keywords",
+   "--shifted", "Generate text for PETSCII in shifted mode",
    "{file name}", "Name of file to process",
    "", ""
 };
@@ -430,8 +433,8 @@ int get_times (char *string, int start, int max, int *stop)
    if (! times && ! isdigit (string [start])) return 0;
 
    for (n = 0, a = start + (times ? 1 : 0);
-   n < MAXDECIM - 1 && a < max && isdigit (string [a]);
-   n ++, a ++) anum [n] = string [a];
+       n < MAXDECIM - 1 && a < max && isdigit (string [a]);
+       n ++, a ++) anum [n] = string [a];
 
    anum [n] = 0;
    if (times && strlen (anum) == 0) return 0;
@@ -463,8 +466,8 @@ char *tokens, int *tok)
    if (quantity)
    {
       for (q = *tok;
-      q < *tok + quantity && q < MAXTOKENLINE - 1;
-      q ++) tokens [q] = byte;
+          q < *tok + quantity && q < MAXTOKENLINE - 1;
+          q ++) tokens [q] = byte;
 
       *tok = q - 1;
       *tex = next - 1;
@@ -473,6 +476,50 @@ char *tokens, int *tok)
    else return FALSE;
 }
 
+/*
+ * Map ASCII character to PETSCII.
+ * PETSCII has shifted and unshifted mode.
+ * In unshifted mode only uppercase letters are available
+ * In shifted mode the lowercase and uppercase are swapped in relation to ASCII.
+ */
+int to_petscii (int c, int casemode) {
+    int r;
+    if (unshifted) {
+        r = toupper(c);
+    } else {
+        if (! casemode && isupper (c))
+            r = c;
+        else if (islower (c))
+            r = toupper (c);
+        else if (isupper (c))
+            r = tolower (c);
+        else
+            r = c;
+    }
+    return r;
+}
+
+/*
+ * Map PETSCII character to ASCII.
+ * PETSCII has shifted and unshifted mode.
+ * In unshifted mode only uppercase letters are available. The lowercase
+ * positions are used for graphical symbols. Conversion causes data loss.
+ * In shifted mode the lowercase and uppercase are swapped in relation to ASCII.
+ */
+
+int to_ascii (int c) {
+    int r;
+    if (unshifted) {
+        r = toupper(c);
+    } else {
+        if (islower (c))
+            r = toupper (c);
+        else if (isupper (c))
+            r = tolower (c);
+        else
+            r = c;
+    }
+}
 
 int tokenize (Basrec_type *node, char *text, int casemode, int colmode)
 {
@@ -556,14 +603,7 @@ int tokenize (Basrec_type *node, char *text, int casemode, int colmode)
    {
       if (comment)
       {
-         if (! casemode && isupper (text [tex]))
-            node -> tokenline [tok] = text [tex];
-         else if (islower (text [tex]))
-            node -> tokenline [tok] = toupper (text [tex]);
-         else if (isupper (text [tex]))
-            node -> tokenline [tok] = tolower (text [tex]);
-         else
-            node -> tokenline [tok] = text [tex];
+         node -> tokenline [tok] = to_petscii (text [tex], casemode);
          tex ++;
       }
       else /* not comment mode */
@@ -608,9 +648,9 @@ int tokenize (Basrec_type *node, char *text, int casemode, int colmode)
 
          if (found)
          {
-      if (! strcmp (kw [k].keyword, COMT_WORD)) comment = TRUE;
-      node -> tokenline [tok] = kw [k].token;
-            tex += len;
+              if (! strcmp (kw [k].keyword, COMT_WORD)) comment = TRUE;
+              node -> tokenline [tok] = kw [k].token;
+                    tex += len;
          }
          else if (quantity)
          {
@@ -624,13 +664,7 @@ int tokenize (Basrec_type *node, char *text, int casemode, int colmode)
 
             if (quote)
             {
-               if (! casemode && isupper (text [tex]))
-                  node -> tokenline [tok] = text [tex];
-               else if (islower (text [tex]))
-                  node -> tokenline [tok] = toupper (text [tex]);
-               else if (isupper (text [tex]))
-                  node -> tokenline [tok] = tolower (text [tex]);
-               else if (text [tex] == '{')
+               if (text [tex] == '{')
                {
                   byte = get_deci_byte (text, tex + 1, MAXLINE - 1);
 
@@ -638,8 +672,7 @@ int tokenize (Basrec_type *node, char *text, int casemode, int colmode)
                   MAXDECIM, node -> tokenline, &tok))
                      exit_illeg_subs (line_num, tex);
                }
-               else
-                  node -> tokenline [tok] = text [tex];
+               else node -> tokenline [tok] = to_petscii (text [tex], casemode);
             }
             else /* not quote mode */
             {
@@ -823,11 +856,11 @@ void process_mult (FILE *in, int overwrite, int casemode, int colmode)
       }
       else if (processing)
       {
-   if (tokenize (&rec, line, casemode, colmode))
-         {
-            set_addy (&rec);
-            outprg (out, &rec);
-         }
+           if (tokenize (&rec, line, casemode, colmode))
+           {
+              set_addy (&rec);
+              outprg (out, &rec);
+           }
       }
    }
 
@@ -921,12 +954,7 @@ int detoken (Basrec_type *rec, char *text, int max, int lowercase)
    {
       if (comment)
       {
-         if (islower (tokens [tok]))
-            text [tex] = toupper (tokens [tok]);
-         else if (isupper (tokens [tok]))
-            text [tex] = tolower (tokens [tok]);
-         else
-            text [tex] = tokens [tok];
+         text [tex] = to_ascii(tokens [tok]);
       }
       else /* not comment mode */
       {
@@ -939,18 +967,18 @@ int detoken (Basrec_type *rec, char *text, int max, int lowercase)
 
          while (search) /* search thru lists of keyword lists */
          {
-      /* search thru current keyword list */
-         while (! found && kw [k].token)
-            if (tokens [tok] == kw [k].token) found = TRUE;
-            else k ++;
+          /* search thru current keyword list */
+             while (! found && kw [k].token)
+                if (tokens [tok] == kw [k].token) found = TRUE;
+                else k ++;
 
-            if (quote || found || kw_list [curr_list + 1] == KW_NULL)
-               search = FALSE;
-            else
-            {
-               curr_list ++;
-               kw = kw_list [curr_list];
-            }
+                if (quote || found || kw_list [curr_list + 1] == KW_NULL)
+                   search = FALSE;
+                else
+                {
+                   curr_list ++;
+                   kw = kw_list [curr_list];
+                }
          }
 
    /* replace space char with keyword w/repeat only if N number of them */
@@ -1005,11 +1033,7 @@ int detoken (Basrec_type *rec, char *text, int max, int lowercase)
 
             if (quote)
             {
-               if (islower (tokens [tok]))
-                  text [tex] = toupper (tokens [tok]);
-               else if (isupper (tokens [tok]))
-                  text [tex] = tolower (tokens [tok]);
-               else if (tokens [tok] < 0x20 || tokens [tok] > 0x7E)
+               if (tokens [tok] < 0x20 || tokens [tok] > 0x7E)
                {
                   text [tex] = '{'; tex ++;
                   token = tokens [tok];
@@ -1038,8 +1062,7 @@ int detoken (Basrec_type *rec, char *text, int max, int lowercase)
 
                   text [tex] = '}';
                }
-               else
-                  text [tex] = tokens [tok];
+               else text [tex] = to_ascii(tokens [tok]);
             }
             else /* not quote mode */
             {
@@ -1315,11 +1338,11 @@ void main (int argc, char *argv [])
    {
       for (i = 1; i < argc; i++)
       {
+         /*
          for (k = 0; k < strlen (argv [i]); k++)
             argv [i][k] = tolower (argv [i][k]);
-
-         if (argv [i][0] == '/' || argv [i][0] == '-')
-         {
+         */
+         if (argv [i][0] == '-') {
             if (! strcmp (argv [i], cmds [TOTXT].command))
                toprg = FALSE;
             else if (! strcmp (argv [i], cmds [TOPRG].command))
@@ -1329,10 +1352,10 @@ void main (int argc, char *argv [])
             else if (! strcmp (argv [i], cmds [NOMULT].command))
                mult = FALSE;
             else if (! (strcmp (argv [i], cmds [HELP].command)
-            && strcmp (argv [i], "/h")
-            && strcmp (argv [i], "/?")
-            && strcmp (argv [i], "-h")))
-               help ();
+                    && strcmp (argv [i], "--h")
+                    && strcmp (argv [i], "-?")
+                    && strcmp (argv [i], "-h")))
+                       help ();
             else if (! strcmp (argv [i], cmds [LIST].command))
                list_cmds ();
             else if (! strcmp (argv [i], cmds [KEYWORDS].command))
@@ -1347,6 +1370,8 @@ void main (int argc, char *argv [])
                lower = FALSE;
             else if (! strcmp (argv [i], cmds [LOWCASE].command))
                casemode = FALSE;
+            else if (! strcmp (argv [i], cmds [SHIFTED].command))
+               unshifted = FALSE;
             else if (! strcmp (argv [i], cmds [CASE].command))
                casemode = TRUE;
       else if (! strcmp (argv [i], cmds [COL].command))

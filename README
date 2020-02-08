@@ -1,9 +1,21 @@
+Commodore 64 uses the PETSCII character set. This can be in "unshifted"
+or "shifted" mode. In unshifted mode only upper case letters are available,
+the locations where ASCII has lower case letters contain graphical symbols.
+Shifted mode provides lower case letters, but compared to ASCII the
+lower and upper case positions are swapped.
+
+The original author ran the programs in "shifted" mode, in order to
+get as close to ASCII as possible.
+
+The original README follows below:
+
+---------------------------------------------------------------------------
 TOK64 converts ascii text file representations of Commodore basic
 program listings into program images suitable to run on a C64.  It
 also converts basic programs back into ascii text listings.  TOK64
 does NOT perform syntax checking.
 
-*** Use the "/list" command line argument for a list of valid commands.
+*** Use the "--list" command line argument for a list of valid commands.
 
 You may specify multiple commands and/or file names on the command
 line in the order you want the commands to occur.
@@ -12,9 +24,9 @@ Default extensions are ".txt" for ascii text files and ".prg" for
 Commodore Basic program files.  That means you may specify extensions
 but if you don't TOK64 will look for files with the defaults.
 An input text file may contain multiple program listings.  Use the
-"/mult" command to enable this function.  Mark the start of each
+"--mult" command to enable this function.  Mark the start of each
 listing with "start tok64 {file name}" and the end with "stop tok64".
-This feature is only available with the "/toprg" command.
+This feature is only available with the "--toprg" command.
 
 Keywords, variables, and quoted named identifiers are NOT case-
 sensitive but quoted strings and comments ARE. So, if you issue a
@@ -35,7 +47,7 @@ continuing a line -- TOK64 will not parse it correctly.  BTW, the
 maximum line length is 400 characters.
 
 If you find that much of a listing will require many continuation chars
-and each logical (basic) line is hanging-indented, use the /col command.
+and each logical (basic) line is hanging-indented, use the --col command.
 TOK64 will start a new basic line when a line number starts in column
 one and will continue the line, ignoring the physical end of line (cr/lf),
 until another number appears in column one or the end of the file is
@@ -66,26 +78,27 @@ it or write other useful software.  Thanks -- Cris Berneburg.
 
 These are the valid command line arguments for TOK64:
 
-/toprg          Tokenize *.TXT text file to Commodore Basic program (*)
-/totxt          Detokenize *.PRG basic file to ascii text
-/mult           Process multiple listings within a single text file
-/nomult         Process text file as a single listing (*)
-/lower          Render keywords as lower case when de-tokenizing (*)
-/upper          Render keywords as upper case when de-tokenizing
-/lowcase        Lower case quoted strings & comments when tokenizing
-/case           Quoted string & comment tokenizing is case-sensitive (*)
-/col            Column sensitivity enabled while tokenizing
-/nocol          Column sensitivity disabled (*)
-/stomp          Overwrite existing files without confirmation
-/nostomp        Ask before overwriting existing files (*)
-/fincart3       The Final Cartridge 3 Basic Extension
-/graph52        Graphics52 Basic Extension
-/64             C64 Basic V2 (*)
-/list           Display a list of command arguments
-/help           The help screen
-/keywords       Display a list of Commodore Basic keywords
-/special        Display a list of special substitutions
-/ext            Display a list of Basic extension keywords
+--toprg          Tokenize *.TXT text file to Commodore Basic program (*)
+--totxt          Detokenize *.PRG basic file to ascii text
+--mult           Process multiple listings within a single text file
+--nomult         Process text file as a single listing (*)
+--lower          Render keywords as lower case when de-tokenizing (*)
+--upper          Render keywords as upper case when de-tokenizing
+--lowcase        Lower case quoted strings & comments when tokenizing
+--case           Quoted string & comment tokenizing is case-sensitive (*)
+--col            Column sensitivity enabled while tokenizing
+--nocol          Column sensitivity disabled (*)
+--stomp          Overwrite existing files without confirmation
+--nostomp        Ask before overwriting existing files (*)
+--fincart3       The Final Cartridge 3 Basic Extension
+--graph52        Graphics52 Basic Extension
+--64             C64 Basic V2 (*)
+--list           Display a list of command arguments
+--help           The help screen
+--keywords       Display a list of Commodore Basic keywords
+--special        Display a list of special substitutions
+--ext            Display a list of Basic extension keywords
+--shifted        Generate text for PETSCII in shifted mode
 {file name}     Name of file to process
 
 

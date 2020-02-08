@@ -15,7 +15,8 @@ int extension (char *path, char *ext, int max)
    int i;
    char *start;
 
-   if ((start = strchr (path, '.')) == (char *) NULL) ext [0] = 0;
+   if ((start = strchr (path, '.')) == (char *) NULL)
+       ext [0] = 0;
    else
    {
       strncpy (ext, start, max);
